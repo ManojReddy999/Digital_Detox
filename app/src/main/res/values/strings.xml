@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Focus</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_focus">Focus</string>
+    <string name="nav_tasks">Tasks</string>
+
+    <!-- Dashboard -->
+    <string name="screen_time">Screen time</string>
+    <string name="most_used">Most Used</string>
+    <string name="see_all">See all</string>
+    <string name="challenges_completed">Challenges Completed</string>
+    <string name="today">Today</string>
+    <string name="vs_last_week">vs last week</string>
+    <string name="less_than_yesterday">%d%% less than yesterday</string>
+
+    <!-- Stats -->
+    <string name="app_usage">App Usage</string>
+    <string name="total_screen_time">Total screen time</string>
+    <string name="daily_goal">daily goal</string>
+    <string name="all_apps">All Apps</string>
+
+    <!-- Focus -->
+    <string name="times_up">Time\'s Up</string>
+    <string name="limit_reached_message">You\'ve reached your daily limit for %s.\nTry something productive instead.</string>
+    <string name="time_saved_today">Time saved today: %s</string>
+    <string name="choose_activity">Choose an Activity</string>
+    <string name="start_activity">Start Activity</string>
+    <string name="maybe_later">Maybe Later</string>
+
+    <!-- Challenges -->
+    <string name="chess_puzzle">Chess Puzzle</string>
+    <string name="sudoku">Sudoku</string>
+    <string name="math_challenge">Math Challenge</string>
+    <string name="chess_prompt">White to move and win in 2 moves</string>
+    <string name="submit_move">Submit Move</string>
+    <string name="submit">Submit</string>
+    <string name="solve_for_x">Solve for x</string>
+    <string name="question_format">Question %d of %d</string>
+
+    <!-- Tasks -->
+    <string name="tasks">Tasks</string>
+    <string name="your_personal_goals">Your personal goals</string>
+    <string name="tasks_completed">Tasks completed</string>
+    <string name="add_new_task">Add New Task</string>
+
+    <!-- Permissions -->
+    <string name="usage_permission_title">Usage Access Required</string>
+    <string name="usage_permission_message">To track your app usage and help you focus, we need permission to access usage statistics.</string>
+    <string name="grant_permission">Grant Permission</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">This service is used to block apps when their timer limit is exceeded. It only activates when you switch apps and does not run constantly in the background.</string>
+</resources>
