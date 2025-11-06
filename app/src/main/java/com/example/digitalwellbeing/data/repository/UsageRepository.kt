@@ -107,23 +107,32 @@ class UsageRepository(
     }
 
     /**
-     * Sync usage data for the past week
+     * Sync usage data for the current calendar week (Monday-Sunday)
+     * This matches what getWeeklyStats() expects to display
      */
     suspend fun syncPastWeekData() {
         if (!hasUsagePermission()) return
 
         val calendar = java.util.Calendar.getInstance()
+        // Set to Monday of this week (matches MainViewModel calculation)
+        calendar.firstDayOfWeek = java.util.Calendar.MONDAY
+        calendar.set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.MONDAY)
         calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
         calendar.set(java.util.Calendar.MINUTE, 0)
         calendar.set(java.util.Calendar.SECOND, 0)
         calendar.set(java.util.Calendar.MILLISECOND, 0)
 
-        // Sync last 7 days
+        android.util.Log.d("UsageRepository", "Syncing current week starting from Monday: ${java.text.SimpleDateFormat("yyyy-MM-dd").format(calendar.timeInMillis)}")
+
+        // Sync all 7 days of this week (Mon through Sun)
         for (i in 0..6) {
             val date = calendar.timeInMillis
+            android.util.Log.d("UsageRepository", "Syncing day $i: ${java.text.SimpleDateFormat("yyyy-MM-dd EEEE").format(date)}")
             syncUsageDataForDate(date)
-            calendar.add(java.util.Calendar.DAY_OF_MONTH, -1)
+            calendar.add(java.util.Calendar.DAY_OF_MONTH, 1)
         }
+
+        android.util.Log.d("UsageRepository", "Finished syncing current week")
     }
 
     /**

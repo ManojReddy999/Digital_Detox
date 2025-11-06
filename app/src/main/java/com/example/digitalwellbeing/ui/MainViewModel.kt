@@ -267,6 +267,12 @@ class MainViewModel(
 
     fun onAppResumed() {
         syncUsageData()
+        // Also sync the current week to ensure all days are up to date
+        viewModelScope.launch {
+            if (usageRepository.hasUsagePermission()) {
+                usageRepository.syncPastWeekData()
+            }
+        }
         // Refresh accessibility state
         _accessibilityRefresh.value += 1
     }
