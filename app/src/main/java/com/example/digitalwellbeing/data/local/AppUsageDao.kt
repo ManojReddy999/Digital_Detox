@@ -6,13 +6,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppUsageDao {
-    @Query("SELECT * FROM app_usage WHERE date >= :startDate ORDER BY usageTimeMillis DESC")
+    @Query("SELECT * FROM app_usage WHERE date = :startDate ORDER BY usageTimeMillis DESC")
     fun getAppUsageForDate(startDate: Long): Flow<List<AppUsageInfo>>
 
-    @Query("SELECT * FROM app_usage WHERE date >= :startDate ORDER BY usageTimeMillis DESC LIMIT :limit")
+    @Query("SELECT * FROM app_usage WHERE date = :startDate ORDER BY usageTimeMillis DESC LIMIT :limit")
     fun getTopUsedApps(startDate: Long, limit: Int): Flow<List<AppUsageInfo>>
 
-    @Query("SELECT SUM(usageTimeMillis) FROM app_usage WHERE date >= :startDate")
+    @Query("SELECT SUM(usageTimeMillis) FROM app_usage WHERE date = :startDate")
     fun getTotalUsageTime(startDate: Long): Flow<Long?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

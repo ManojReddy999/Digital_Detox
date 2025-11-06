@@ -185,6 +185,7 @@ class UsageRepository(
     /**
      * Get weekly stats starting from a specific date
      * Returns 7 days of data starting from the given date
+     * This is a reactive Flow that updates whenever any day's data changes
      */
     fun getWeeklyStats(weekStartDate: Long): Flow<List<DailyStats>> {
         val calendar = java.util.Calendar.getInstance()
@@ -201,15 +202,31 @@ class UsageRepository(
             date
         }
 
-        // Query stats for all dates and return as a single flow
-        return flow {
-            val stats = dates.map { date ->
-                dailyStatsDao.getStatsForDate(date).firstOrNull() ?: DailyStats(
-                    date = date,
-                    totalUsageTimeMillis = 0
-                )
-            }
-            emit(stats)
+        // Get flows for all 7 days
+        val flowsList = dates.map { date ->
+            dailyStatsDao.getStatsForDate(date)
+        }
+
+        // Combine all 7 flows so updates to any day trigger re-emission
+        // This ensures stats update when sync completes
+        return kotlinx.coroutines.flow.combine(
+            flowsList[0],
+            flowsList[1],
+            flowsList[2],
+            flowsList[3],
+            flowsList[4],
+            flowsList[5],
+            flowsList[6]
+        ) { day0, day1, day2, day3, day4, day5, day6 ->
+            listOf(
+                day0 ?: DailyStats(date = dates[0], totalUsageTimeMillis = 0),
+                day1 ?: DailyStats(date = dates[1], totalUsageTimeMillis = 0),
+                day2 ?: DailyStats(date = dates[2], totalUsageTimeMillis = 0),
+                day3 ?: DailyStats(date = dates[3], totalUsageTimeMillis = 0),
+                day4 ?: DailyStats(date = dates[4], totalUsageTimeMillis = 0),
+                day5 ?: DailyStats(date = dates[5], totalUsageTimeMillis = 0),
+                day6 ?: DailyStats(date = dates[6], totalUsageTimeMillis = 0)
+            )
         }
     }
 
