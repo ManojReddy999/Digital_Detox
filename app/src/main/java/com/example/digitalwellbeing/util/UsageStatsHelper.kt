@@ -40,9 +40,11 @@ class UsageStatsHelper(private val context: Context) {
 
     /**
      * Get app usage for today
+     * Uses device local timezone for accurate day boundaries
      */
     fun getTodayUsageStats(): List<AppUsageInfo> {
         val calendar = Calendar.getInstance()
+        // Reset to start of day in local timezone
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
@@ -50,25 +52,37 @@ class UsageStatsHelper(private val context: Context) {
         val startTime = calendar.timeInMillis
         val endTime = System.currentTimeMillis()
 
-        android.util.Log.d("UsageStatsHelper", "Query range: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(startTime)} to ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime)}")
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.getDefault())
+        android.util.Log.d("UsageStatsHelper", "=== TODAY STATS QUERY ===")
+        android.util.Log.d("UsageStatsHelper", "Start: ${sdf.format(startTime)} ($startTime)")
+        android.util.Log.d("UsageStatsHelper", "End:   ${sdf.format(endTime)} ($endTime)")
+        android.util.Log.d("UsageStatsHelper", "Duration: ${(endTime - startTime) / 1000 / 60} minutes")
 
         return getUsageStats(startTime, endTime)
     }
 
     /**
      * Get app usage for a specific date
+     * Important: dateMillis should be the start of the day (midnight) in local timezone
      */
     fun getUsageStatsForDate(dateMillis: Long): List<AppUsageInfo> {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = dateMillis
+        // Ensure we're at start of day
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
         val startTime = calendar.timeInMillis
 
+        // Add exactly 1 day to get to midnight of next day
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         val endTime = calendar.timeInMillis
+
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        android.util.Log.d("UsageStatsHelper", "=== DATE STATS QUERY ===")
+        android.util.Log.d("UsageStatsHelper", "Start: ${sdf.format(startTime)}")
+        android.util.Log.d("UsageStatsHelper", "End:   ${sdf.format(endTime)}")
 
         return getUsageStats(startTime, endTime)
     }
@@ -76,14 +90,35 @@ class UsageStatsHelper(private val context: Context) {
     /**
      * Get app usage for a specific time range by processing events
      * Uses the accurate queryEvents() approach instead of unreliable queryUsageStats()
+     *
+     * @param startTime Start of time range (inclusive) in milliseconds
+     * @param endTime End of time range (exclusive) in milliseconds
+     * @return List of AppUsageInfo sorted by usage time (descending)
      */
     fun getUsageStats(startTime: Long, endTime: Long): List<AppUsageInfo> {
         if (!hasUsageStatsPermission()) {
+            android.util.Log.w("UsageStatsHelper", "No usage stats permission")
             return emptyList()
         }
 
+        // Validate time range
+        if (startTime >= endTime) {
+            android.util.Log.e("UsageStatsHelper", "Invalid time range: start ($startTime) >= end ($endTime)")
+            return emptyList()
+        }
+
+        if (endTime > System.currentTimeMillis()) {
+            android.util.Log.w("UsageStatsHelper", "End time is in the future, adjusting to current time")
+        }
+
         try {
+            android.util.Log.d("UsageStatsHelper", "Querying events from UsageStatsManager...")
             val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
+
+            if (usageEvents == null) {
+                android.util.Log.e("UsageStatsHelper", "queryEvents returned null - device might be locked")
+                return emptyList()
+            }
 
             val appUsageMap = mutableMapOf<String, Long>()
             val appResumeTimes = mutableMapOf<String, Long>()
@@ -94,9 +129,11 @@ class UsageStatsHelper(private val context: Context) {
             var lastNonChromeApp: String? = null
 
             val event = android.app.usage.UsageEvents.Event()
+            var eventCount = 0
 
             while (usageEvents.hasNextEvent()) {
                 usageEvents.getNextEvent(event)
+                eventCount++
 
                 val packageName = event.packageName ?: continue
                 val className = event.className ?: ""
@@ -196,8 +233,26 @@ class UsageStatsHelper(private val context: Context) {
                     val previousTime = appUsageMap.getOrDefault(packageName, 0L)
                     appUsageMap[packageName] = previousTime + duration
                     appLastUsedMap[packageName] = endTime
+                    android.util.Log.d("UsageStatsHelper", "App still in foreground at end: $packageName - added $duration ms")
                 }
             }
+
+            // CRITICAL: Also account for Custom Tabs still open at end of query
+            for ((className, sessionInfo) in customTabResumeTimes) {
+                val (resumeTime, parentApp) = sessionInfo
+                val duration = endTime - resumeTime
+                if (duration > 0) {
+                    val previousTime = appUsageMap.getOrDefault(parentApp, 0L)
+                    appUsageMap[parentApp] = previousTime + duration
+                    appLastUsedMap[parentApp] = endTime
+                    android.util.Log.d("UsageStatsHelper", "Custom Tab still open at end: $className - added $duration ms to $parentApp")
+                }
+            }
+
+            android.util.Log.d("UsageStatsHelper", "=== EVENT PROCESSING COMPLETE ===")
+            android.util.Log.d("UsageStatsHelper", "Total events processed: $eventCount")
+            android.util.Log.d("UsageStatsHelper", "Apps with usage data (before merging): ${appUsageMap.size}")
+            android.util.Log.d("UsageStatsHelper", "Total raw usage: ${appUsageMap.values.sum() / 1000 / 60} minutes")
 
             // First, merge apps using shared UID (works for apps that share UIDs)
             mergeRelatedAppsBySharedUid(appUsageMap, appLastUsedMap)
@@ -206,17 +261,29 @@ class UsageStatsHelper(private val context: Context) {
             // This handles cases where manufacturers use different UIDs for related system apps
             mergeSystemAppFamilies(appUsageMap, appLastUsedMap)
 
+            android.util.Log.d("UsageStatsHelper", "Apps after merging: ${appUsageMap.size}")
+
             // Filter and return results
             val launchableApps = getLaunchableApps()
             val maxReasonableTime = endTime - startTime
 
-            return appUsageMap
+            android.util.Log.d("UsageStatsHelper", "Max reasonable time for period: ${maxReasonableTime / 1000 / 60} minutes")
+
+            val filteredResults = appUsageMap
                 .filter { (packageName, usageTime) ->
-                    usageTime > 0 &&
-                    packageName != context.packageName &&
-                    packageName != "com.google.android.apps.wellbeing" &&  // Exclude Digital Wellbeing
-                    usageTime <= maxReasonableTime &&
-                    (launchableApps.contains(packageName) || !isSystemApp(packageName))
+                    val include = usageTime > 0 &&
+                        packageName != context.packageName &&
+                        packageName != "com.google.android.apps.wellbeing" &&  // Exclude Digital Wellbeing
+                        usageTime <= maxReasonableTime &&
+                        (launchableApps.contains(packageName) || !isSystemApp(packageName))
+
+                    if (!include && usageTime > 0) {
+                        android.util.Log.d("UsageStatsHelper", "Filtered out: $packageName (${usageTime / 1000 / 60}min) - " +
+                            "isLaunchable=${launchableApps.contains(packageName)}, " +
+                            "isSystem=${isSystemApp(packageName)}, " +
+                            "exceedsMax=${usageTime > maxReasonableTime}")
+                    }
+                    include
                 }
                 .map { (packageName, usageTime) ->
                     AppUsageInfo(
@@ -228,6 +295,15 @@ class UsageStatsHelper(private val context: Context) {
                     )
                 }
                 .sortedByDescending { it.usageTimeMillis }
+
+            android.util.Log.d("UsageStatsHelper", "=== FINAL RESULTS ===")
+            android.util.Log.d("UsageStatsHelper", "Returned ${filteredResults.size} apps")
+            android.util.Log.d("UsageStatsHelper", "Total usage: ${filteredResults.sumOf { it.usageTimeMillis } / 1000 / 60} minutes")
+            filteredResults.take(5).forEach { app ->
+                android.util.Log.d("UsageStatsHelper", "  ${app.appName}: ${app.usageTimeMillis / 1000 / 60}min")
+            }
+
+            return filteredResults
 
         } catch (e: Exception) {
             android.util.Log.e("UsageStatsHelper", "Error getting usage stats", e)
