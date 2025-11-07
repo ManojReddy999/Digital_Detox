@@ -9,6 +9,7 @@ import com.example.digitalwellbeing.util.UsageStatsHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 class UsageRepository(
     private val appUsageDao: AppUsageDao,
@@ -83,13 +84,20 @@ class UsageRepository(
     suspend fun syncUsageDataForDate(dateMillis: Long) {
         if (!hasUsagePermission()) return
 
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        android.util.Log.d("UsageRepository", "Syncing data for date: ${sdf.format(dateMillis)}")
+
         val usageStats = usageStatsHelper.getUsageStatsForDate(dateMillis)
+
+        android.util.Log.d("UsageRepository", "Found ${usageStats.size} apps with usage for ${sdf.format(dateMillis)}")
 
         appUsageDao.deleteUsageForDate(dateMillis)
         appUsageDao.insertAllAppUsage(usageStats)
 
         // Update daily stats
         val totalUsage = usageStats.sumOf { it.usageTimeMillis }
+
+        android.util.Log.d("UsageRepository", "Total usage for ${sdf.format(dateMillis)}: ${totalUsage / 1000 / 60} minutes")
 
         val existingStats = dailyStatsDao.getStatsForDate(dateMillis).firstOrNull()
         if (existingStats != null) {
@@ -185,39 +193,39 @@ class UsageRepository(
     /**
      * Get weekly stats starting from a specific date
      * Returns 7 days of data starting from the given date
+     * Reactively updates when any day's data changes in the database
      */
     fun getWeeklyStats(weekStartDate: Long): Flow<List<DailyStats>> {
-        val calendar = java.util.Calendar.getInstance()
-        calendar.timeInMillis = weekStartDate
-
-        // Get all 7 days of the week
-        val dates = (0..6).map {
+        // Calculate all 7 dates for the week
+        val dates = (0..6).map { dayOffset ->
+            val calendar = java.util.Calendar.getInstance()
+            calendar.timeInMillis = weekStartDate
             calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
             calendar.set(java.util.Calendar.MINUTE, 0)
             calendar.set(java.util.Calendar.SECOND, 0)
             calendar.set(java.util.Calendar.MILLISECOND, 0)
-            val date = calendar.timeInMillis
-            calendar.add(java.util.Calendar.DAY_OF_MONTH, 1)
-            date
+            calendar.add(java.util.Calendar.DAY_OF_MONTH, dayOffset)
+            calendar.timeInMillis
         }
 
-        // Query stats for all dates and return as a single flow
-        return flow {
-            val stats = dates.map { date ->
-                dailyStatsDao.getStatsForDate(date).firstOrNull() ?: DailyStats(
-                    date = date,
-                    totalUsageTimeMillis = 0
-                )
+        // Create a list of flows for each day
+        val dailyFlows = dates.map { date ->
+            dailyStatsDao.getStatsForDate(date).map { stats ->
+                stats ?: DailyStats(date = date, totalUsageTimeMillis = 0)
             }
-            emit(stats)
+        }
+
+        // Combine all 7 Flows so they all reactively update when database changes
+        return kotlinx.coroutines.flow.combine(dailyFlows) { statsArray ->
+            statsArray.toList()
         }
     }
 
     /**
-     * Get app usage for a specific date
+     * Get app usage for a specific date (exact match)
      */
     fun getAppUsageForDate(dateMillis: Long): Flow<List<AppUsageInfo>> {
-        return appUsageDao.getAppUsageForDate(dateMillis)
+        return appUsageDao.getAppUsageForSpecificDate(dateMillis)
     }
 
     /**

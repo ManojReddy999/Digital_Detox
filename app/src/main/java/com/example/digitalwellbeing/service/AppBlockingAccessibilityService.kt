@@ -5,6 +5,7 @@ import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import com.example.digitalwellbeing.DigitalWellbeingApp
 import com.example.digitalwellbeing.data.repository.AppLimitRepository
+import com.example.digitalwellbeing.util.OverlayPermissionUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
@@ -21,7 +22,7 @@ class AppBlockingAccessibilityService : AccessibilityService() {
     // Periodic monitoring for active app usage
     private var periodicCheckJob: Job? = null
     private var currentLimitedApp: String? = null
-    private val checkIntervalMillis = 90_000L // Check every 90 seconds (1.5 minutes)
+    private val checkIntervalMillis = 30_000L // Check every 30 seconds
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -82,13 +83,21 @@ class AppBlockingAccessibilityService : AccessibilityService() {
                     val limitMinutes = limit.limitMillis / 1000 / 60
                     val usageMinutes = usageMillis / 1000 / 60
 
-                    android.util.Log.d("AppBlocking", "Usage: ${usageMinutes}m, Limit: ${limitMinutes}m")
+                    android.util.Log.d("AppBlocking", "===== LIMIT CHECK =====")
+                    android.util.Log.d("AppBlocking", "App: ${limit.appName} ($packageName)")
+                    android.util.Log.d("AppBlocking", "Usage: ${usageMinutes}m (${usageMillis}ms)")
+                    android.util.Log.d("AppBlocking", "Limit: ${limitMinutes}m (${limit.limitMillis}ms)")
+                    android.util.Log.d("AppBlocking", "Exceeded: ${usageMillis >= limit.limitMillis}")
 
                     // If limit exceeded, block the app
                     if (usageMillis >= limit.limitMillis) {
-                        android.util.Log.d("AppBlocking", "BLOCKING APP: ${limit.appName}")
+                        android.util.Log.d("AppBlocking", "🚫 BLOCKING APP: ${limit.appName}")
                         blockApp(limit.appName, limit.limitMillis)
+                    } else {
+                        android.util.Log.d("AppBlocking", "✓ Within limit, ${limitMinutes - usageMinutes}m remaining")
                     }
+                } else {
+                    android.util.Log.d("AppBlocking", "No limit set for $packageName")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("AppBlocking", "Error checking app: $packageName", e)
@@ -117,17 +126,34 @@ class AppBlockingAccessibilityService : AccessibilityService() {
                 var lastResumeTime = 0L
                 val event = android.app.usage.UsageEvents.Event()
 
+                val resumeEventType = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED
+                } else {
+                    @Suppress("DEPRECATION")
+                    android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND
+                }
+
+                val pauseEventType = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED
+                } else {
+                    @Suppress("DEPRECATION")
+                    android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND
+                }
+
                 while (events.hasNextEvent()) {
                     events.getNextEvent(event)
 
                     if (event.packageName == packageName) {
                         when (event.eventType) {
-                            android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> {
+                            resumeEventType -> {
                                 lastResumeTime = event.timeStamp
+                                android.util.Log.d("AppBlocking", "Resume event for $packageName at ${event.timeStamp}")
                             }
-                            android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> {
+                            pauseEventType -> {
                                 if (lastResumeTime > 0) {
-                                    totalUsage += event.timeStamp - lastResumeTime
+                                    val sessionDuration = event.timeStamp - lastResumeTime
+                                    totalUsage += sessionDuration
+                                    android.util.Log.d("AppBlocking", "Pause event for $packageName, session: ${sessionDuration / 1000}s")
                                     lastResumeTime = 0
                                 }
                             }
@@ -161,13 +187,26 @@ class AppBlockingAccessibilityService : AccessibilityService() {
 
         android.util.Log.d("AppBlocking", "Blocking app: $appName")
 
-        // Show blocking dialog activity (it will handle going to home screen)
-        val dialogIntent = Intent(this, BlockingDialogActivity::class.java).apply {
-            putExtra(BlockingDialogActivity.EXTRA_APP_NAME, appName)
-            putExtra(BlockingDialogActivity.EXTRA_LIMIT_FORMATTED, limitFormatted)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        // Check if we have overlay permission for true overlay blocking
+        if (OverlayPermissionUtils.canDrawOverlays(this)) {
+            android.util.Log.d("AppBlocking", "Using overlay service (permission granted)")
+            // Show blocking overlay using TimerOverlayService (true overlay on top of app)
+            val overlayIntent = Intent(this, TimerOverlayService::class.java).apply {
+                putExtra(TimerOverlayService.EXTRA_APP_NAME, appName)
+                putExtra(TimerOverlayService.EXTRA_LIMIT_FORMATTED, limitFormatted)
+            }
+            startService(overlayIntent)
+        } else {
+            android.util.Log.d("AppBlocking", "Using dialog activity (no overlay permission)")
+            // Fall back to dialog activity (separate window)
+            val blockingIntent = Intent(this, BlockingDialogActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra(BlockingDialogActivity.EXTRA_APP_NAME, appName)
+                putExtra(BlockingDialogActivity.EXTRA_LIMIT_FORMATTED, limitFormatted)
+            }
+            startActivity(blockingIntent)
         }
-        startActivity(dialogIntent)
     }
 
     /**

@@ -11,6 +11,8 @@ import com.example.digitalwellbeing.data.repository.ChallengeRepository
 import com.example.digitalwellbeing.data.repository.TaskRepository
 import com.example.digitalwellbeing.data.repository.UsageRepository
 import com.example.digitalwellbeing.util.AccessibilityUtils
+import com.example.digitalwellbeing.util.DateUtils
+import com.example.digitalwellbeing.util.OverlayPermissionUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -27,6 +29,7 @@ data class DashboardUiState(
     val appLimits: Map<String, Long> = emptyMap(), // packageName -> limitMillis
     val hasTimersSet: Boolean = false,
     val accessibilityEnabled: Boolean = false,
+    val overlayPermissionGranted: Boolean = false,
     val setupCompleted: Boolean = false
 )
 
@@ -107,9 +110,10 @@ class MainViewModel(
         val limitsMap = limits.associate { it.packageName to it.limitMillis }
         val hasTimersSet = limits.isNotEmpty()
         val accessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context)
+        val overlayPermissionGranted = OverlayPermissionUtils.canDrawOverlays(context)
 
         // Debug logging
-        android.util.Log.d("Dashboard", "Limits count: ${limits.size}, hasTimersSet: $hasTimersSet, accessibilityEnabled: $accessibilityEnabled")
+        android.util.Log.d("Dashboard", "Limits count: ${limits.size}, hasTimersSet: $hasTimersSet, accessibilityEnabled: $accessibilityEnabled, overlayPermission: $overlayPermissionGranted")
         limits.forEach { limit ->
             android.util.Log.d("Dashboard", "Limit: ${limit.appName} - ${limit.limitMillis}ms (enabled: ${limit.isEnabled})")
         }
@@ -127,6 +131,7 @@ class MainViewModel(
             appLimits = limitsMap,
             hasTimersSet = hasTimersSet,
             accessibilityEnabled = accessibilityEnabled,
+            overlayPermissionGranted = overlayPermissionGranted,
             setupCompleted = setupCompleted
         )
     }.stateIn(
@@ -148,14 +153,25 @@ class MainViewModel(
         calendar.add(java.util.Calendar.WEEK_OF_YEAR, weekOffset)
         val weekStartDate = calendar.timeInMillis
 
+        // Get today's date for comparison
+        val today = DateUtils.getStartOfToday()
+
         combine(
-            usageRepository.getTodayAppUsage(),
+            usageRepository.getAppUsageForDate(today),
             usageRepository.getWeeklyStats(weekStartDate),
             _usagePermissionGranted,
             appLimitRepository.getEnabledLimits()
-        ) { apps, weeklyDailyStats, hasPermission, limits ->
-            val visibleApps = if (hasPermission) apps else emptyList()
-            val totalUsage = visibleApps.sumOf { it.usageTimeMillis }
+        ) { todayApps, weeklyDailyStats, hasPermission, limits ->
+            // For "All Apps" section, show today's apps if viewing current week,
+            // otherwise show empty (user can click on specific days)
+            val visibleApps = if (hasPermission && weekOffset == 0) todayApps else emptyList()
+
+            // Calculate total usage for today only (shown at top of screen)
+            val totalUsage = if (weekOffset == 0 && hasPermission) {
+                todayApps.sumOf { it.usageTimeMillis }
+            } else {
+                0L
+            }
             val dailyGoal = 6L * 60 * 60 * 1000 // 6 hours
             val progress = if (hasPermission) {
                 (totalUsage.toFloat() / dailyGoal).coerceAtMost(1f)
@@ -248,11 +264,15 @@ class MainViewModel(
         viewModelScope.launch {
             val hasPermission = usageRepository.hasUsagePermission()
             if (hasPermission) {
-                android.util.Log.d("MainViewModel", "Syncing past week data...")
-                usageRepository.syncPastWeekData()
-                android.util.Log.d("MainViewModel", "Past week sync complete")
+                android.util.Log.d("MainViewModel", "Syncing all available historical data...")
+                usageRepository.syncAllAvailableData()
+                android.util.Log.d("MainViewModel", "Historical data sync complete")
             }
         }
+    }
+
+    fun refreshHistoricalData() {
+        syncHistoricalData()
     }
 
     fun navigateToPreviousWeek() {
@@ -321,6 +341,10 @@ class MainViewModel(
         AccessibilityUtils.openAccessibilitySettings(context)
     }
 
+    fun requestOverlayPermission() {
+        OverlayPermissionUtils.requestOverlayPermission(context)
+    }
+
     fun markSetupCompleted() {
         viewModelScope.launch {
             appPreferencesRepository.markSetupCompleted()
@@ -334,7 +358,10 @@ class MainViewModel(
     /**
      * Get app usage for a specific date (for bar chart clicks)
      */
-    fun getAppUsageForDay(dayIndex: Int, weekOffset: Int = 0): Flow<List<com.example.digitalwellbeing.data.model.AppUsageInfo>> {
+    fun getAppUsageForDay(dayIndex: Int): Flow<List<com.example.digitalwellbeing.data.model.AppUsageInfo>> {
+        // Use the current selected week offset
+        val weekOffset = _selectedWeekOffset.value
+
         // Calculate the date for the specific day
         val calendar = java.util.Calendar.getInstance()
         calendar.firstDayOfWeek = java.util.Calendar.MONDAY
@@ -346,6 +373,9 @@ class MainViewModel(
         calendar.add(java.util.Calendar.WEEK_OF_YEAR, weekOffset)
         calendar.add(java.util.Calendar.DAY_OF_MONTH, dayIndex)
         val dateMillis = calendar.timeInMillis
+
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        android.util.Log.d("MainViewModel", "getAppUsageForDay: dayIndex=$dayIndex, weekOffset=$weekOffset, date=${sdf.format(dateMillis)}, dateMillis=$dateMillis")
 
         return usageRepository.getAppUsageForDate(dateMillis)
     }

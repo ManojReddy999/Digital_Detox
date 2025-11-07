@@ -51,7 +51,9 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.DigitalWellbeing" />
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:noHistory="true" />
 
         <!-- Timer overlay service -->
         <service

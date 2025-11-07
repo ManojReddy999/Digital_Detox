@@ -28,7 +28,8 @@ fun PermissionSetupScreen(
 
     val steps = listOf(
         PermissionStep.UsagePermission,
-        PermissionStep.AccessibilityPermission
+        PermissionStep.AccessibilityPermission,
+        PermissionStep.OverlayPermission
     )
 
     Column(
@@ -129,8 +130,21 @@ fun PermissionSetupScreen(
                         onGrantClick = { viewModel.requestAccessibilityPermission() },
                         onNextClick = {
                             if (dashboardState.accessibilityEnabled) {
-                                onPermissionsGranted()
+                                currentStep++
                             }
+                        }
+                    )
+                }
+                PermissionStep.OverlayPermission -> {
+                    PermissionStepContent(
+                        icon = "📱",
+                        title = "Display Over Other Apps",
+                        description = "Allow the app to show blocking overlays on top of apps when you exceed your limit. This creates a true overlay experience.",
+                        buttonText = "Grant Overlay Permission",
+                        isGranted = dashboardState.overlayPermissionGranted,
+                        onGrantClick = { viewModel.requestOverlayPermission() },
+                        onNextClick = {
+                            onPermissionsGranted()
                         }
                     )
                 }
@@ -146,7 +160,12 @@ fun PermissionSetupScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             steps.forEachIndexed { index, _ ->
-                val isCompleted = if (index == 0) dashboardState.usagePermissionGranted else dashboardState.accessibilityEnabled
+                val isCompleted = when (index) {
+                    0 -> dashboardState.usagePermissionGranted
+                    1 -> dashboardState.accessibilityEnabled
+                    2 -> dashboardState.overlayPermissionGranted
+                    else -> false
+                }
                 val isCurrent = index == currentStep
 
                 Surface(
@@ -168,7 +187,8 @@ fun PermissionSetupScreen(
 
 enum class PermissionStep {
     UsagePermission,
-    AccessibilityPermission
+    AccessibilityPermission,
+    OverlayPermission
 }
 
 @Composable

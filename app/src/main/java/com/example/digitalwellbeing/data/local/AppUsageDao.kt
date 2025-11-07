@@ -9,6 +9,9 @@ interface AppUsageDao {
     @Query("SELECT * FROM app_usage WHERE date >= :startDate ORDER BY usageTimeMillis DESC")
     fun getAppUsageForDate(startDate: Long): Flow<List<AppUsageInfo>>
 
+    @Query("SELECT * FROM app_usage WHERE date = :date ORDER BY usageTimeMillis DESC")
+    fun getAppUsageForSpecificDate(date: Long): Flow<List<AppUsageInfo>>
+
     @Query("SELECT * FROM app_usage WHERE date >= :startDate ORDER BY usageTimeMillis DESC LIMIT :limit")
     fun getTopUsedApps(startDate: Long, limit: Int): Flow<List<AppUsageInfo>>
 

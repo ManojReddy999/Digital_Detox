@@ -3,8 +3,6 @@ package com.example.digitalwellbeing.ui.screens.stats
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +26,6 @@ fun StatsScreen(
     var showTimerDialog by remember { mutableStateOf(false) }
     var selectedAppForTimer by remember { mutableStateOf<com.example.digitalwellbeing.data.model.AppUsageInfo?>(null) }
 
-    var showDayStatsDialog by remember { mutableStateOf(false) }
     var selectedDayIndex by remember { mutableStateOf<Int?>(null) }
     var selectedDayApps by remember { mutableStateOf<List<com.example.digitalwellbeing.data.model.AppUsageInfo>>(emptyList()) }
 
@@ -63,19 +60,42 @@ fun StatsScreen(
             } else {
                 // Total Screen Time Card with Weekly Chart
                 WellbeingCard {
+                    // Capture selected day index for stable reference
+                    val currentSelectedDay = selectedDayIndex
+
+                    // Calculate the total to display based on selection
+                    val displayTotal = if (currentSelectedDay != null) {
+                        // Show selected day's total (even if 0)
+                        val totalMillis = selectedDayApps.sumOf { it.usageTimeMillis }
+                        val hours = totalMillis / (1000 * 60 * 60)
+                        val minutes = (totalMillis % (1000 * 60 * 60)) / (1000 * 60)
+                        "${hours}h ${minutes}m"
+                    } else {
+                        // Show today's total only when no day is selected
+                        uiState.totalUsage
+                    }
+
+                    // Determine the label to display
+                    val fullDayNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+                    val displayLabel = if (currentSelectedDay != null) {
+                        fullDayNames[currentSelectedDay]
+                    } else {
+                        "Today"
+                    }
+
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = uiState.totalUsage,
+                            text = displayTotal,
                             fontSize = 52.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
                             letterSpacing = (-1.5).sp
                         )
                         Text(
-                            text = "Today",
+                            text = displayLabel,
                             fontSize = 14.sp,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium,
@@ -95,8 +115,7 @@ fun StatsScreen(
                     WeeklyBarChart(
                         weeklyStats = weeklyData,
                         onDayClick = { dayIndex ->
-                            selectedDayIndex = dayIndex
-                            showDayStatsDialog = true
+                            selectedDayIndex = if (selectedDayIndex == dayIndex) null else dayIndex
                         }
                     )
 
@@ -113,30 +132,39 @@ fun StatsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // All Apps Card
+                // Apps Card - Show selected day or all apps
                 WellbeingCard {
                     CardHeader(title = "All Apps")
 
-                    val maxUsage = uiState.allApps.maxOfOrNull { it.usageTimeMillis } ?: 1L
-
-                    uiState.allApps.forEach { app ->
-                        AppUsageItem(
-                            appInfo = app,
-                            maxUsage = maxUsage,
-                            timerLimitMillis = uiState.appLimits[app.packageName],
-                            onSetTimerClick = {
-                                selectedAppForTimer = app
-                                showTimerDialog = true
-                            }
-                        )
-                        if (app != uiState.allApps.last()) {
-                            Divider(color = com.example.digitalwellbeing.ui.theme.Border)
-                        }
+                    // Determine which apps to show
+                    val appsToShow = if (selectedDayIndex != null && selectedDayApps.isNotEmpty()) {
+                        selectedDayApps
+                    } else if (selectedDayIndex != null) {
+                        emptyList()
+                    } else {
+                        uiState.allApps
                     }
 
-                    if (uiState.allApps.isEmpty()) {
+                    if (appsToShow.isNotEmpty()) {
+                        val maxUsage = appsToShow.maxOfOrNull { it.usageTimeMillis } ?: 1L
+
+                        appsToShow.forEach { app ->
+                            AppUsageItem(
+                                appInfo = app,
+                                maxUsage = maxUsage,
+                                timerLimitMillis = uiState.appLimits[app.packageName],
+                                onSetTimerClick = {
+                                    selectedAppForTimer = app
+                                    showTimerDialog = true
+                                }
+                            )
+                            if (app != appsToShow.last()) {
+                                Divider(color = com.example.digitalwellbeing.ui.theme.Border)
+                            }
+                        }
+                    } else {
                         Text(
-                            text = "No usage data available",
+                            text = if (selectedDayIndex != null) "No usage data for this day" else "No usage data available",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
                             modifier = Modifier.padding(vertical = 16.dp)
@@ -147,6 +175,12 @@ fun StatsScreen(
         }
     }
 
+    // Clear selected day when week changes
+    LaunchedEffect(uiState.currentWeekDate) {
+        selectedDayIndex = null
+        selectedDayApps = emptyList()
+    }
+
     // Load day's apps when a day is selected
     LaunchedEffect(selectedDayIndex) {
         selectedDayIndex?.let { dayIndex ->
@@ -154,82 +188,6 @@ fun StatsScreen(
                 selectedDayApps = apps
             }
         }
-    }
-
-    // Day Stats Dialog
-    if (showDayStatsDialog && selectedDayIndex != null) {
-        val dayLabels = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-        val selectedDayName = dayLabels[selectedDayIndex!!]
-
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = {
-                showDayStatsDialog = false
-                selectedDayIndex = null
-                selectedDayApps = emptyList()
-            },
-            title = {
-                Text(
-                    text = "$selectedDayName's Stats",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    if (selectedDayApps.isNotEmpty()) {
-                        val totalUsage = selectedDayApps.sumOf { it.usageTimeMillis }
-                        val hours = totalUsage / (1000 * 60 * 60)
-                        val minutes = (totalUsage % (1000 * 60 * 60)) / (1000 * 60)
-
-                        Text(
-                            text = "Total: ${hours}h ${minutes}m",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-
-                        val maxUsage = selectedDayApps.maxOfOrNull { it.usageTimeMillis } ?: 1L
-
-                        selectedDayApps.forEach { app ->
-                            AppUsageItem(
-                                appInfo = app,
-                                maxUsage = maxUsage,
-                                timerLimitMillis = uiState.appLimits[app.packageName],
-                                onSetTimerClick = {
-                                    selectedAppForTimer = app
-                                    showTimerDialog = true
-                                }
-                            )
-                            if (app != selectedDayApps.last()) {
-                                Divider(color = com.example.digitalwellbeing.ui.theme.Border)
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = "No usage data for this day",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDayStatsDialog = false
-                        selectedDayIndex = null
-                        selectedDayApps = emptyList()
-                    }
-                ) {
-                    Text("Close")
-                }
-            }
-        )
     }
 
     // App Timer Dialog

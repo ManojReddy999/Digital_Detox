@@ -1,14 +1,13 @@
 package com.example.digitalwellbeing.data.model
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
- * Represents usage information for a single app
+ * Represents usage information for a single app on a specific date
+ * Uses composite primary key of packageName + date to allow multiple records per app
  */
-@Entity(tableName = "app_usage")
+@Entity(tableName = "app_usage", primaryKeys = ["packageName", "date"])
 data class AppUsageInfo(
-    @PrimaryKey
     val packageName: String,
     val appName: String,
     val usageTimeMillis: Long,

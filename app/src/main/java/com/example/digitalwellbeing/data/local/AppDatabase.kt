@@ -16,7 +16,7 @@ import com.example.digitalwellbeing.data.model.*
         Challenge::class,
         HistoricalUsageData::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

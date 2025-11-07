@@ -26,17 +26,20 @@ class BlockingDialogActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Make it a true overlay without bringing app to foreground
+        // Configure window to appear as overlay with translucent background
         window.apply {
-            setFlags(
-                android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-                android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-            )
-            // Make background translucent
+            // Make background translucent to show the semi-transparent overlay
             setBackgroundDrawableResource(android.R.color.transparent)
-            // Show on top of everything including status bar
+
+            // Add flags for overlay behavior
             addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
             addFlags(android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            // Make it fullscreen
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         }
 
         val appName = intent.getStringExtra(EXTRA_APP_NAME) ?: "This app"
