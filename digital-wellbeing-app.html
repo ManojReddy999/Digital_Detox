@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus - Digital Wellbeing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+            background: #fafafa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .phone-frame {
+            width: 100%;
+            max-width: 400px;
+            height: 800px;
+            background: #ffffff;
+            border-radius: 40px;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            display: none;
+            background: #ffffff;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            font-size: 13px;
+            color: #000;
+            background: #ffffff;
+            font-weight: 500;
+        }
+
+        .time {
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .header {
+            padding: 48px 24px 32px;
+            background: #ffffff;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 4px;
+            letter-spacing: -0.8px;
+        }
+
+        .header p {
+            font-size: 15px;
+            color: #666;
+            font-weight: 400;
+            letter-spacing: -0.2px;
+        }
+
+        .content {
+            padding: 0 24px 100px;
+            background: #ffffff;
+        }
+
+        .card {
+            background: #fafafa;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+            letter-spacing: -0.3px;
+        }
+
+        .view-all {
+            color: #000;
+            font-size: 15px;
+            text-decoration: none;
+            font-weight: 500;
+            opacity: 0.5;
+        }
+
+        .stat-circle {
+            width: 180px;
+            height: 180px;
+            margin: 24px auto;
+            position: relative;
+        }
+
+        .circle-bg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#000 0deg 216deg, #f0f0f0 216deg 360deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circle-inner {
+            width: 148px;
+            height: 148px;
+            border-radius: 50%;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circle-time {
+            font-size: 34px;
+            font-weight: 700;
+            color: #000;
+            letter-spacing: -1px;
+        }
+
+        .circle-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .app-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .app-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .app-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            background: #f5f5f5;
+            border: 1px solid #e8e8e8;
+        }
+
+        .app-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .app-info {
+            flex: 1;
+        }
+
+        .app-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+
+        .app-time {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .app-bar {
+            width: 4px;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-left: 12px;
+        }
+
+        .app-bar-fill {
+            width: 100%;
+            background: #000;
+        }
+
+        .limit-screen {
+            background: #ffffff;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 32px;
+            text-align: center;
+        }
+
+        .limit-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 32px;
+            opacity: 0.9;
+        }
+
+        .limit-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #000;
+            letter-spacing: -0.6px;
+        }
+
+        .limit-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 48px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        .alternatives-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #000;
+            letter-spacing: -0.3px;
+        }
+
+        .alternatives-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .alternative-card {
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            border-radius: 16px;
+            padding: 24px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .alternative-card:active {
+            background: #f5f5f5;
+            transform: scale(0.98);
+        }
+
+        .alternative-icon {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 12px;
+            opacity: 0.9;
+        }
+
+        .alternative-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #000;
+            letter-spacing: -0.2px;
+        }
+
+        .button {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: -0.3px;
+            width: 100%;
+        }
+
+        .button:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .button-secondary {
+            background: #fafafa;
+            color: #000;
+            border: 1px solid #e8e8e8;
+            margin-top: 12px;
+        }
+
+        .challenge-screen {
+            padding: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .challenge-header {
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .back-btn {
+            cursor: pointer;
+            color: #000;
+            margin-right: 16px;
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .challenge-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+            letter-spacing: -0.3px;
+        }
+
+        .challenge-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 0;
+            width: 320px;
+            height: 320px;
+            border: 1px solid #e8e8e8;
+            margin-bottom: 32px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .chess-square {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .chess-square.light {
+            background: #ffffff;
+        }
+
+        .chess-square.dark {
+            background: #f5f5f5;
+        }
+
+        .puzzle-prompt {
+            font-size: 16px;
+            font-weight: 500;
+            color: #000;
+            margin-bottom: 24px;
+            text-align: center;
+            letter-spacing: -0.2px;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 0;
+            background: #e8e8e8;
+            border: 1px solid #e8e8e8;
+            margin-bottom: 32px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .sudoku-cell {
+            aspect-ratio: 1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #000;
+            border: 0.5px solid #f0f0f0;
+        }
+
+        .sudoku-cell.given {
+            background: #fafafa;
+            color: #000;
+            font-weight: 700;
+        }
+
+        .math-problem {
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            padding: 48px 32px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .math-question {
+            font-size: 32px;
+            font-weight: 700;
+            color: #000;
+            letter-spacing: -0.8px;
+        }
+
+        .math-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 24px;
+            text-align: center;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            background: #ffffff;
+            color: #000;
+            font-weight: 600;
+        }
+
+        .math-input:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .task-list {
+            width: 100%;
+        }
+
+        .task-item {
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .task-checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #e8e8e8;
+            border-radius: 6px;
+            margin-right: 14px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .task-checkbox.checked {
+            background: #000;
+            border-color: #000;
+            position: relative;
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 15px;
+            color: #000;
+            font-weight: 500;
+            letter-spacing: -0.2px;
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 24px 20px;
+            background: #ffffff;
+            border-top: 1px solid #f0f0f0;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+
+        .nav-item.active {
+            background: #fafafa;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+            opacity: 0.6;
+        }
+
+        .nav-item.active .nav-icon {
+            opacity: 1;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            color: #000;
+            font-weight: 500;
+            opacity: 0.6;
+            letter-spacing: -0.1px;
+        }
+
+        .nav-item.active .nav-label {
+            opacity: 1;
+            font-weight: 600;
+        }
+
+        .timer-badge {
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #000;
+            letter-spacing: -0.2px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #000;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-badge-value {
+            color: #000;
+            font-weight: 600;
+        }
+
+        svg {
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <!-- Screen 1: Dashboard -->
+        <div class="screen active" id="dashboard">
+            <div class="status-bar">
+                <span class="time">9:41</span>
+                <div class="status-icons">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6v2H2zm14 0h6v2h-6zM10 3h2v2h-2zm-8 6h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2zM2 15h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+            
+            <div class="header">
+                <h1>Focus</h1>
+                <p>Thursday, October 30</p>
+            </div>
+
+            <div class="content">
+                <div class="card">
+                    <div class="stat-circle">
+                        <div class="circle-bg">
+                            <div class="circle-inner">
+                                <div class="circle-time">3h 24m</div>
+                                <div class="circle-label">Screen time</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; color: #666; font-size: 14px; font-weight: 500;">
+                        <span style="color: #000; font-weight: 600;">28%</span> less than yesterday
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Most Used</div>
+                        <a href="#" class="view-all" onclick="showScreen('appDetails')">See all</a>
+                    </div>
+                    
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2z"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Instagram</div>
+                            <div class="app-time">1h 24m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 70%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Twitter</div>
+                            <div class="app-time">52m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 50%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">YouTube</div>
+                            <div class="app-time">48m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 45%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Challenges Completed</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 36px; font-weight: 700; color: #000; letter-spacing: -1px;">12</div>
+                            <div style="font-size: 14px; color: #666; font-weight: 500;">Today</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="stat-badge">
+                                <span class="stat-badge-value">+45%</span>
+                                <span>vs last week</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-item active" onclick="showScreen('dashboard')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    <div class="nav-label">Home</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('appDetails')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                    <div class="nav-label">Stats</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('limitReached')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <div class="nav-label">Focus</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('tasks')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <div class="nav-label">Tasks</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 2: App Details -->
+        <div class="screen" id="appDetails">
+            <div class="status-bar">
+                <span class="time">9:41</span>
+                <div class="status-icons">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6v2H2zm14 0h6v2h-6zM10 3h2v2h-2zm-8 6h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2zM2 15h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-7.24 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="challenge-header">
+                <div class="back-btn" onclick="showScreen('dashboard')">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </div>
+                <div class="challenge-title">App Usage</div>
+            </div>
+
+            <div class="content">
+                <div class="card">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 52px; font-weight: 700; color: #000; letter-spacing: -1.5px;">3h 24m</div>
+                        <div style="font-size: 14px; color: #666; font-weight: 500; margin-top: 4px;">Total screen time</div>
+                    </div>
+                    <div class="progress-bar" style="height: 6px;">
+                        <div class="progress-fill" style="width: 60%;"></div>
+                    </div>
+                    <div style="text-align: center; margin-top: 12px;">
+                        <span class="stat-badge">
+                            <span class="stat-badge-value">6h</span>
+                            <span>daily goal</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title" style="margin-bottom: 20px;">All Apps</div>
+                    
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2z"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Instagram</div>
+                            <div class="app-time">1h 24m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 70%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Twitter</div>
+                            <div class="app-time">52m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 50%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">YouTube</div>
+                            <div class="app-time">48m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 45%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="app-item">
+                        <div class="app-icon">
+                            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Messages</div>
+                            <div class="app-time">20m</div>
+                        </div>
+                        <div class="app-bar">
+                            <div class="app-bar-fill" style="height: 25%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-item" onclick="showScreen('dashboard')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    <div class="nav-label">Home</div>
+                </div>
+                <div class="nav-item active">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                    <div class="nav-label">Stats</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('limitReached')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <div class="nav-label">Focus</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('tasks')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <div class="nav-label">Tasks</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 3: Limit Reached -->
+        <div class="screen" id="limitReached">
+            <div class="limit-screen">
+                <svg class="limit-icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12 6 12 12 16 14" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <div class="limit-title">Time's Up</div>
+                <div class="limit-subtitle">You've reached your daily limit for Instagram.<br/>Try something productive instead.</div>
+                
+                <div class="timer-badge">Time saved today: 45 min</div>
+
+                <div class="alternatives-title">Choose an Activity</div>
+                
+                <div class="alternatives-grid">
+                    <div class="alternative-card" onclick="showScreen('chess')">
+                        <svg class="alternative-icon" viewBox="0 0 24 24">
+                            <path d="M9 3h6v2H9zm0 4h6v2H9zm0 4h6v2H9zm-1 4h8l-1 8H9z"/>
+                        </svg>
+                        <div class="alternative-name">Chess Puzzle</div>
+                    </div>
+                    <div class="alternative-card" onclick="showScreen('sudoku')">
+                        <svg class="alternative-icon" viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" stroke-width="2"/>
+                            <line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" stroke-width="2"/>
+                            <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2"/>
+                            <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <div class="alternative-name">Sudoku</div>
+                    </div>
+                    <div class="alternative-card" onclick="showScreen('math')">
+                        <svg class="alternative-icon" viewBox="0 0 24 24">
+                            <line x1="5" y1="9" x2="19" y2="9" stroke="currentColor" stroke-width="2"/>
+                            <line x1="5" y1="15" x2="19" y2="15" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="5" x2="12" y2="13" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <div class="alternative-name">Math</div>
+                    </div>
+                    <div class="alternative-card" onclick="showScreen('tasks')">
+                        <svg class="alternative-icon" viewBox="0 0 24 24">
+                            <path d="M9 11l3 3L22 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <div class="alternative-name">My Tasks</div>
+                    </div>
+                </div>
+
+                <button class="button" onclick="showScreen('chess')">
+                    Start Activity
+                </button>
+                <button class="button button-secondary" onclick="showScreen('dashboard')">
+                    Maybe Later
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen 4: Chess Challenge -->
+        <div class="screen" id="chess">
+            <div class="status-bar">
+                <span class="time">9:41</span>
+                <div class="status-icons">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6v2H2zm14 0h6v2h-6zM10 3h2v2h-2zm-8 6h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2zM2 15h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-7.24 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="challenge-header">
+                <div class="back-btn" onclick="showScreen('limitReached')">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </div>
+                <div class="challenge-title">Chess Puzzle</div>
+            </div>
+
+            <div class="challenge-content" style="padding: 32px 24px;">
+                <div class="timer-badge">5:00</div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 60%;"></div>
+                </div>
+
+                <div class="puzzle-prompt">White to move and win in 2 moves</div>
+                
+                <div class="chess-board">
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light">♜</div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light">♚</div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark">♟</div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light">♕</div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark">♙</div>
+                    <div class="chess-square light">♙</div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light">♙</div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light">♙</div>
+                    <div class="chess-square dark"></div>
+
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark">♔</div>
+                    <div class="chess-square light"></div>
+                    <div class="chess-square dark"></div>
+                    <div class="chess-square light"></div>
+                </div>
+
+                <button class="button" onclick="alert('Puzzle solved! Great job.')">
+                    Submit Move
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen 5: Sudoku -->
+        <div class="screen" id="sudoku">
+            <div class="status-bar">
+                <span class="time">9:41</span>
+                <div class="status-icons">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6v2H2zm14 0h6v2h-6zM10 3h2v2h-2zm-8 6h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2zM2 15h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-7.24 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="challenge-header">
+                <div class="back-btn" onclick="showScreen('limitReached')">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </div>
+                <div class="challenge-title">Sudoku</div>
+            </div>
+
+            <div class="challenge-content" style="padding: 32px 24px;">
+                <div class="timer-badge">8:32</div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 35%;"></div>
+                </div>
+
+                <div class="sudoku-grid" style="width: 300px;">
+                    <div class="sudoku-cell given">5</div>
+                    <div class="sudoku-cell given">3</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">7</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+
+                    <div class="sudoku-cell given">6</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">1</div>
+                    <div class="sudoku-cell given">9</div>
+                    <div class="sudoku-cell given">5</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">9</div>
+                    <div class="sudoku-cell given">8</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">6</div>
+                    <div class="sudoku-cell"></div>
+
+                    <div class="sudoku-cell given">8</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">6</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">3</div>
+
+                    <div class="sudoku-cell given">4</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">8</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">3</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">1</div>
+
+                    <div class="sudoku-cell given">7</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">2</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">6</div>
+
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">6</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">2</div>
+                    <div class="sudoku-cell given">8</div>
+                    <div class="sudoku-cell"></div>
+
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">4</div>
+                    <div class="sudoku-cell given">1</div>
+                    <div class="sudoku-cell given">9</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">5</div>
+
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">8</div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell"></div>
+                    <div class="sudoku-cell given">7</div>
+                    <div class="sudoku-cell given">9</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 300px; margin-top: 24px;">
+                    <button class="button" style="padding: 14px;">1</button>
+                    <button class="button" style="padding: 14px;">2</button>
+                    <button class="button" style="padding: 14px;">3</button>
+                    <button class="button" style="padding: 14px;">4</button>
+                    <button class="button" style="padding: 14px;">5</button>
+                    <button class="button" style="padding: 14px;">6</button>
+                    <button class="button" style="padding: 14px;">7</button>
+                    <button class="button" style="padding: 14px;">8</button>
+                    <button class="button" style="padding: 14px;">9</button>
+                    <button class="button button-secondary" style="padding: 14px;">×</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 6: Math Challenge -->
+        <div class="screen" id="math">
+            <div class="status-bar">
+                <span class="time">9:41</span>
+                <div class="status-icons">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6v2H2zm14 0h6v2h-6zM10 3h2v2h-2zm-8 6h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2zM2 15h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-7.24 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="challenge-header">
+                <div class="back-btn" onclick="showScreen('limitReached')">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </div>
+                <div class="challenge-title">Math Challenge</div>
+            </div>
+
+            <div class="challenge-content" style="padding: 32px 24px;">
+                <div class="timer-badge">2:00</div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 60%;"></div>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <span class="stat-badge">Question 3 of 5</span>
+                </div>
+
+                <div class="math-problem">
+                    <div style="font-size: 14px; margin-bottom: 16px; opacity: 0.7; font-weight: 500;">Solve for x</div>
+                    <div class="math-question">3x + 7 = 25</div>
+                </div>
+
+                <input type="number" class="math-input" placeholder="Your answer">
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-bottom: 24px;">
+                    <button class="button">7</button>
+                    <button class="button">8</button>
+                    <button class="button">9</button>
+                    <button class="button">4</button>
+                    <button class="button">5</button>
+                    <button class="button">6</button>
+                    <button class="button">1</button>
+                    <button class="button">2</button>
+                    <button class="button">3</button>
+                    <button class="button" style="grid-column: span 2;">0</button>
+                    <button class="button button-secondary">×</button>
+                </div>
+
+                <button class="button" onclick="alert('Correct! Well done.')">
+                    Submit
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen 7: Tasks -->
+        <div class="screen" id="tasks">
+            <div class="status-bar">
+                <span class="time">9:41</span>
+                <div class="status-icons">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6v2H2zm14 0h6v2h-6zM10 3h2v2h-2zm-8 6h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2zM2 15h6v2H2zm14 0h6v2h-6zm-4 0h2v2h-2z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-7.24 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                </div>
+            </div>
+
+            <div class="header">
+                <h1>Tasks</h1>
+                <p>Your personal goals</p>
+            </div>
+
+            <div class="content">
+                <div class="card">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 52px; font-weight: 700; color: #000; letter-spacing: -1.5px;">7<span style="opacity: 0.3;">/12</span></div>
+                        <div style="font-size: 14px; color: #666; font-weight: 500; margin-top: 4px;">Tasks completed</div>
+                    </div>
+                    <div class="progress-bar" style="height: 6px;">
+                        <div class="progress-fill" style="width: 58%;"></div>
+                    </div>
+                </div>
+
+                <div class="task-list">
+                    <div class="task-item">
+                        <div class="task-checkbox checked"></div>
+                        <div class="task-text completed">Review project proposal</div>
+                    </div>
+
+                    <div class="task-item">
+                        <div class="task-checkbox"></div>
+                        <div class="task-text">Call dentist for appointment</div>
+                    </div>
+
+                    <div class="task-item">
+                        <div class="task-checkbox"></div>
+                        <div class="task-text">Read 20 pages of "Atomic Habits"</div>
+                    </div>
+
+                    <div class="task-item">
+                        <div class="task-checkbox checked"></div>
+                        <div class="task-text completed">Complete 30-minute workout</div>
+                    </div>
+
+                    <div class="task-item">
+                        <div class="task-checkbox"></div>
+                        <div class="task-text">Prepare presentation slides</div>
+                    </div>
+
+                    <div class="task-item">
+                        <div class="task-checkbox"></div>
+                        <div class="task-text">Learn 10 new Spanish words</div>
+                    </div>
+                </div>
+
+                <button class="button" style="margin-top: 24px;">
+                    Add New Task
+                </button>
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-item" onclick="showScreen('dashboard')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    <div class="nav-label">Home</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('appDetails')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                    <div class="nav-label">Stats</div>
+                </div>
+                <div class="nav-item" onclick="showScreen('limitReached')">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <div class="nav-label">Focus</div>
+                </div>
+                <div class="nav-item active">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <div class="nav-label">Tasks</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+    </script>
+</body>
+</html>

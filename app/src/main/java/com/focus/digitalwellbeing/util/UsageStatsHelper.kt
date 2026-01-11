@@ -1,0 +1,570 @@
+﻿package com.focus.digitalwellbeing.util
+
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.provider.Settings
+import com.focus.digitalwellbeing.data.model.AppUsageInfo
+import java.util.Calendar
+
+class UsageStatsHelper(private val context: Context) {
+
+    private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    private val packageManager = context.packageManager
+
+
+    /**
+     * Check if usage access permission is granted
+     */
+    fun hasUsageStatsPermission(): Boolean {
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            context.packageName
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    /**
+     * Open usage access settings
+     */
+    fun openUsageAccessSettings() {
+        context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        })
+    }
+
+    /**
+     * Get app usage for today
+     * Uses device local timezone for accurate day boundaries
+     */
+    fun getTodayUsageStats(): List<AppUsageInfo> {
+        val calendar = Calendar.getInstance()
+        // Reset to start of day in local timezone
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.getDefault())
+        android.util.Log.d("UsageStatsHelper", "=== TODAY STATS QUERY ===")
+        android.util.Log.d("UsageStatsHelper", "Start: ${sdf.format(startTime)} ($startTime)")
+        android.util.Log.d("UsageStatsHelper", "End:   ${sdf.format(endTime)} ($endTime)")
+        android.util.Log.d("UsageStatsHelper", "Duration: ${(endTime - startTime) / 1000 / 60} minutes")
+
+        return getUsageStats(startTime, endTime)
+    }
+
+    /**
+     * Get app usage for a specific date
+     * Important: dateMillis should be the start of the day (midnight) in local timezone
+     */
+    fun getUsageStatsForDate(dateMillis: Long): List<AppUsageInfo> {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = dateMillis
+        // Ensure we're at start of day
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+
+        // Add exactly 1 day to get to midnight of next day
+        calendar.add(Calendar.DAY_OF_MONTH, 1)
+        val endTime = calendar.timeInMillis
+
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        android.util.Log.d("UsageStatsHelper", "=== DATE STATS QUERY ===")
+        android.util.Log.d("UsageStatsHelper", "Start: ${sdf.format(startTime)}")
+        android.util.Log.d("UsageStatsHelper", "End:   ${sdf.format(endTime)}")
+
+        return getUsageStats(startTime, endTime)
+    }
+
+    /**
+     * Get app usage for a specific time range by processing events
+     * Uses the accurate queryEvents() approach instead of unreliable queryUsageStats()
+     *
+     * @param startTime Start of time range (inclusive) in milliseconds
+     * @param endTime End of time range (exclusive) in milliseconds
+     * @return List of AppUsageInfo sorted by usage time (descending)
+     */
+    /**
+     * Get app usage for a specific time range by processing events
+     * Uses the accurate queryEvents() approach instead of unreliable queryUsageStats()
+     *
+     * @param startTime Start of time range (inclusive) in milliseconds
+     * @param endTime End of time range (exclusive) in milliseconds
+     * @return List of AppUsageInfo sorted by usage time (descending)
+     */
+    fun getUsageStats(startTime: Long, endTime: Long): List<AppUsageInfo> {
+        if (!hasUsageStatsPermission()) {
+            android.util.Log.w("UsageStatsHelper", "No usage stats permission")
+            return emptyList()
+        }
+
+        // Validate time range
+        if (startTime >= endTime) {
+            android.util.Log.e("UsageStatsHelper", "Invalid time range: start ($startTime) >= end ($endTime)")
+            return emptyList()
+        }
+
+        // Clamp endTime to current time to prevent future usage calculation
+        // This fixes the issue where the current app's usage is inflated if endTime is tomorrow
+        val actualEndTime = if (endTime > System.currentTimeMillis()) {
+            android.util.Log.w("UsageStatsHelper", "End time is in the future, adjusting to current time")
+            System.currentTimeMillis()
+        } else {
+            endTime
+        }
+
+        try {
+            // Query events starting from 2 hours before startTime to capture apps that were already open
+            // This fixes the "midnight crossing" issue where usage starting before midnight wasn't counted
+            val queryStartTime = startTime - (2 * 60 * 60 * 1000)
+            
+            android.util.Log.d("UsageStatsHelper", "Querying events from UsageStatsManager...")
+            val usageEvents = usageStatsManager.queryEvents(queryStartTime, actualEndTime)
+
+            if (usageEvents == null) {
+                android.util.Log.e("UsageStatsHelper", "queryEvents returned null - device might be locked")
+                return emptyList()
+            }
+
+            val appUsageMap = mutableMapOf<String, Long>()
+            val appResumeTimes = mutableMapOf<String, Long>()
+            val appLastUsedMap = mutableMapOf<String, Long>()
+
+            // Track Custom Tab sessions separately
+            val customTabResumeTimes = mutableMapOf<String, Pair<Long, String>>() // className -> (resumeTime, parentApp)
+            var lastNonChromeApp: String? = null
+
+            val event = android.app.usage.UsageEvents.Event()
+            var eventCount = 0
+
+            while (usageEvents.hasNextEvent()) {
+                usageEvents.getNextEvent(event)
+                eventCount++
+
+                val packageName = event.packageName ?: continue
+                val className = event.className ?: ""
+                val eventTime = event.timeStamp
+
+                // Check API level to use the correct events
+                val isResumeEvent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED
+                } else {
+                    event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND
+                }
+
+                val isPauseEvent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED
+                } else {
+                    event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND
+                }
+
+                // Check if this is Chrome
+                val isChromePackage = packageName == "com.android.chrome" ||
+                                    packageName == "com.chrome.beta" ||
+                                    packageName == "com.chrome.dev" ||
+                                    packageName == "com.chrome.canary"
+
+                // Detect Chrome Custom Tabs by class name
+                val isChromeCustomTab = isChromePackage &&
+                                        (className.contains("CustomTabActivity") ||
+                                         className.contains("customtabs"))
+
+                when {
+                    isResumeEvent -> {
+                        if (isChromeCustomTab) {
+                            // This is a Custom Tab - attribute to the last non-Chrome app
+                            if (lastNonChromeApp != null) {
+                                customTabResumeTimes[className] = Pair(eventTime, lastNonChromeApp!!)
+                            } else {
+                                // No parent app - treat as regular Chrome
+                                appResumeTimes[packageName] = eventTime
+                                appLastUsedMap[packageName] = eventTime
+                            }
+                        } else {
+                            // Regular app
+                            appResumeTimes[packageName] = eventTime
+                            appLastUsedMap[packageName] = eventTime
+
+                            // Track as potential parent app if not Chrome
+                            if (!isChromePackage) {
+                                lastNonChromeApp = packageName
+                            }
+                        }
+                    }
+                    isPauseEvent -> {
+                        if (isChromeCustomTab) {
+                            // Custom Tab paused - find its parent app and add duration
+                            val sessionInfo = customTabResumeTimes.remove(className)
+                            if (sessionInfo != null) {
+                                val (resumeTime, parentApp) = sessionInfo
+                                
+                                // Only count usage that falls within [startTime, actualEndTime]
+                                val overlapStart = maxOf(resumeTime, startTime)
+                                val overlapEnd = minOf(eventTime, actualEndTime)
+                                
+                                if (overlapEnd > overlapStart) {
+                                    val previousTime = appUsageMap.getOrDefault(parentApp, 0L)
+                                    appUsageMap[parentApp] = previousTime + (overlapEnd - overlapStart)
+                                    appLastUsedMap[parentApp] = eventTime
+                                }
+                            } else {
+                                // No matching resume - treat as regular Chrome
+                                val resumeTime = appResumeTimes.remove(packageName)
+                                if (resumeTime != null) {
+                                    val overlapStart = maxOf(resumeTime, startTime)
+                                    val overlapEnd = minOf(eventTime, actualEndTime)
+                                    
+                                    if (overlapEnd > overlapStart) {
+                                        val previousTime = appUsageMap.getOrDefault(packageName, 0L)
+                                        appUsageMap[packageName] = previousTime + (overlapEnd - overlapStart)
+                                        appLastUsedMap[packageName] = eventTime
+                                    }
+                                }
+                            }
+                        } else {
+                            // Regular app pause
+                            val resumeTime = appResumeTimes.remove(packageName)
+                            if (resumeTime != null) {
+                                val overlapStart = maxOf(resumeTime, startTime)
+                                val overlapEnd = minOf(eventTime, actualEndTime)
+                                
+                                if (overlapEnd > overlapStart) {
+                                    val previousTime = appUsageMap.getOrDefault(packageName, 0L)
+                                    appUsageMap[packageName] = previousTime + (overlapEnd - overlapStart)
+                                    appLastUsedMap[packageName] = eventTime
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // CRITICAL STEP: Account for apps still in the foreground
+            for ((packageName, resumeTime) in appResumeTimes) {
+                val overlapStart = maxOf(resumeTime, startTime)
+                val overlapEnd = actualEndTime
+                
+                if (overlapEnd > overlapStart) {
+                    val previousTime = appUsageMap.getOrDefault(packageName, 0L)
+                    appUsageMap[packageName] = previousTime + (overlapEnd - overlapStart)
+                    appLastUsedMap[packageName] = actualEndTime
+                }
+            }
+
+            // CRITICAL: Also account for Custom Tabs still open at end of query
+            for ((_, sessionInfo) in customTabResumeTimes) {
+                val (resumeTime, parentApp) = sessionInfo
+                val overlapStart = maxOf(resumeTime, startTime)
+                val overlapEnd = actualEndTime
+                
+                if (overlapEnd > overlapStart) {
+                    val previousTime = appUsageMap.getOrDefault(parentApp, 0L)
+                    appUsageMap[parentApp] = previousTime + (overlapEnd - overlapStart)
+                    appLastUsedMap[parentApp] = actualEndTime
+                }
+            }
+
+            android.util.Log.d("UsageStatsHelper", "=== EVENT PROCESSING COMPLETE ===")
+            android.util.Log.d("UsageStatsHelper", "Total events processed: $eventCount")
+            android.util.Log.d("UsageStatsHelper", "Apps with usage data (before merging): ${appUsageMap.size}")
+            android.util.Log.d("UsageStatsHelper", "Total raw usage: ${appUsageMap.values.sum() / 1000 / 60} minutes")
+
+            // First, merge apps using shared UID (works for apps that share UIDs)
+            mergeRelatedAppsBySharedUid(appUsageMap, appLastUsedMap)
+
+            // Then, apply manufacturer-agnostic semantic grouping rules
+            // This handles cases where manufacturers use different UIDs for related system apps
+            mergeSystemAppFamilies(appUsageMap, appLastUsedMap)
+
+            android.util.Log.d("UsageStatsHelper", "Apps after merging: ${appUsageMap.size}")
+
+            // Filter and return results
+            val launchableApps = getLaunchableApps()
+            val maxReasonableTime = actualEndTime - startTime
+
+            android.util.Log.d("UsageStatsHelper", "Max reasonable time for period: ${maxReasonableTime / 1000 / 60} minutes")
+
+            val filteredResults = appUsageMap
+                .filter { (packageName, usageTime) ->
+                    val include = usageTime > 0 &&
+                        packageName != context.packageName &&
+                        packageName != "com.google.android.apps.wellbeing" &&  // Exclude Digital Wellbeing
+                        usageTime <= maxReasonableTime &&
+                        (launchableApps.contains(packageName) || !isSystemApp(packageName))
+
+                    if (!include && usageTime > 0) {
+                        android.util.Log.d("UsageStatsHelper", "Filtered out: $packageName (${usageTime / 1000 / 60}min) - " +
+                            "isLaunchable=${launchableApps.contains(packageName)}, " +
+                            "isSystem=${isSystemApp(packageName)}, " +
+                            "exceedsMax=${usageTime > maxReasonableTime}")
+                    }
+                    include
+                }
+                .map { (packageName, usageTime) ->
+                    AppUsageInfo(
+                        packageName = packageName,
+                        appName = getAppName(packageName),
+                        usageTimeMillis = usageTime,
+                        lastTimeUsed = appLastUsedMap[packageName] ?: actualEndTime,
+                        date = startTime
+                    )
+                }
+                .sortedByDescending { it.usageTimeMillis }
+
+            android.util.Log.d("UsageStatsHelper", "=== FINAL RESULTS ===")
+            android.util.Log.d("UsageStatsHelper", "Returned ${filteredResults.size} apps")
+            android.util.Log.d("UsageStatsHelper", "Total usage: ${filteredResults.sumOf { it.usageTimeMillis } / 1000 / 60} minutes")
+            filteredResults.take(5).forEach { app ->
+                android.util.Log.d("UsageStatsHelper", "  ${app.appName}: ${app.usageTimeMillis / 1000 / 60}min")
+            }
+
+            return filteredResults
+
+        } catch (e: Exception) {
+            android.util.Log.e("UsageStatsHelper", "Error getting usage stats", e)
+            return emptyList()
+        }
+    }
+
+    /**
+     * Merge system app families based on semantic grouping
+     * This handles cases where manufacturers assign different UIDs to related system apps
+     * Works across all Android manufacturers (Samsung, OnePlus, Pixel, Xiaomi, etc.)
+     */
+    private fun mergeSystemAppFamilies(
+        appUsageMap: MutableMap<String, Long>,
+        appLastUsedMap: MutableMap<String, Long>
+    ) {
+        android.util.Log.d("UsageStatsHelper", "=== Starting semantic merging ===")
+
+        // Define app families: [primary package, list of related packages to merge into it]
+        val appFamilies = listOf(
+            // Phone/Contacts/Dialer family - merge all into Contacts (matches Digital Wellbeing)
+            "com.android.contacts" to listOf(
+                "com.android.phone",
+                "com.android.dialer",
+                "com.google.android.dialer",
+                "com.android.incallui",
+                "com.android.server.telecom",
+                "com.samsung.android.contacts",
+                "com.samsung.android.dialer",
+                "com.oneplus.contacts",
+                "com.oplus.contacts",
+                "com.oplus.aicall",
+                "com.miui.contactsphone"
+            ),
+            // Google App family - merge Assistant into Google App
+            "com.google.android.googlequicksearchbox" to listOf(
+                "com.google.android.apps.googleassistant",
+                "com.google.android.apps.search.lite", // Google Go
+                "com.google.android.voiceinteraction"
+            )
+        )
+
+        for ((primaryPackage, relatedPackages) in appFamilies) {
+            // Check if primary package exists in usage map
+            val primaryExists = appUsageMap.containsKey(primaryPackage)
+
+            var totalUsage = appUsageMap[primaryPackage] ?: 0L
+            var latestTime = appLastUsedMap[primaryPackage] ?: 0L
+            var mergedAny = false
+
+            for (relatedPkg in relatedPackages) {
+                if (appUsageMap.containsKey(relatedPkg)) {
+                    val usage = appUsageMap[relatedPkg] ?: 0L
+                    val lastUsed = appLastUsedMap[relatedPkg] ?: 0L
+
+                    if (usage > 0) {
+                        android.util.Log.d("UsageStatsHelper", "Semantic merge: $relatedPkg ($usage ms) -> $primaryPackage")
+                        totalUsage += usage
+                        latestTime = maxOf(latestTime, lastUsed)
+                        mergedAny = true
+
+                        appUsageMap.remove(relatedPkg)
+                        appLastUsedMap.remove(relatedPkg)
+                    }
+                }
+            }
+
+            // Update primary package if we merged anything
+            if (mergedAny || primaryExists) {
+                appUsageMap[primaryPackage] = totalUsage
+                appLastUsedMap[primaryPackage] = latestTime
+                android.util.Log.d("UsageStatsHelper", "Total usage for $primaryPackage after semantic merge: $totalUsage ms")
+            }
+        }
+
+        android.util.Log.d("UsageStatsHelper", "=== Semantic merging complete ===")
+    }
+
+    /**
+     * Merge related apps by shared UID
+     * Apps that share the same UID are part of the same app family and should be merged
+     * This handles Phone/Contacts/Dialer/InCallUI across all manufacturers
+     */
+    private fun mergeRelatedAppsBySharedUid(
+        appUsageMap: MutableMap<String, Long>,
+        appLastUsedMap: MutableMap<String, Long>
+    ) {
+        android.util.Log.d("UsageStatsHelper", "=== Starting UID-based merging ===")
+        android.util.Log.d("UsageStatsHelper", "Apps before merging: ${appUsageMap.keys.joinToString(", ")}")
+
+        // Group packages by their shared UID
+        val uidGroups = mutableMapOf<Int, MutableList<String>>()
+
+        for (packageName in appUsageMap.keys.toList()) {
+            try {
+                val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                val uid = appInfo.uid
+                val usage = appUsageMap[packageName] ?: 0L
+
+                android.util.Log.d("UsageStatsHelper", "Package: $packageName, UID: $uid, Usage: $usage ms")
+                uidGroups.getOrPut(uid) { mutableListOf() }.add(packageName)
+            } catch (e: PackageManager.NameNotFoundException) {
+                android.util.Log.w("UsageStatsHelper", "Package not found: $packageName")
+            }
+        }
+
+        android.util.Log.d("UsageStatsHelper", "Found ${uidGroups.size} unique UIDs")
+
+        // For each UID group with multiple packages, merge them into the "primary" package
+        for ((uid, packages) in uidGroups) {
+            if (packages.size <= 1) continue  // No merging needed
+
+            android.util.Log.d("UsageStatsHelper", "UID $uid has ${packages.size} packages: ${packages.joinToString(", ")}")
+
+            // Find the "primary" package - prefer the one with launcher activity
+            val primaryPackage = packages.firstOrNull { pkg ->
+                try {
+                    val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
+                    val hasLauncher = launchIntent != null
+                    if (hasLauncher) {
+                        android.util.Log.d("UsageStatsHelper", "  $pkg HAS launcher activity")
+                    }
+                    hasLauncher
+                } catch (e: Exception) {
+                    false
+                }
+            } ?: packages.first()  // Fallback to first package
+
+            android.util.Log.d("UsageStatsHelper", "  Primary package selected: $primaryPackage")
+
+            // Merge all other packages into the primary one
+            var totalUsage = appUsageMap[primaryPackage] ?: 0L
+            var latestTime = appLastUsedMap[primaryPackage] ?: 0L
+
+            for (pkg in packages) {
+                if (pkg == primaryPackage) continue
+
+                val usage = appUsageMap[pkg] ?: 0L
+                val lastUsed = appLastUsedMap[pkg] ?: 0L
+
+                if (usage > 0) {
+                    android.util.Log.d("UsageStatsHelper", "  Merging $pkg ($usage ms) into $primaryPackage")
+                    totalUsage += usage
+                    latestTime = maxOf(latestTime, lastUsed)
+
+                    appUsageMap.remove(pkg)
+                    appLastUsedMap.remove(pkg)
+                }
+            }
+
+            // Update primary package with merged data
+            if (totalUsage > 0) {
+                android.util.Log.d("UsageStatsHelper", "  Final merged usage for $primaryPackage: $totalUsage ms")
+                appUsageMap[primaryPackage] = totalUsage
+                appLastUsedMap[primaryPackage] = latestTime
+            }
+        }
+
+        android.util.Log.d("UsageStatsHelper", "=== UID merging complete ===")
+        android.util.Log.d("UsageStatsHelper", "Apps after merging: ${appUsageMap.keys.joinToString(", ")}")
+    }
+
+    /**
+     * Get all installed launchable apps as AppUsageInfo with 0 usage
+     */
+    fun getAllInstalledApps(): List<AppUsageInfo> {
+        val launchableApps = getLaunchableApps()
+        val now = System.currentTimeMillis()
+        
+        return launchableApps.map { packageName ->
+            AppUsageInfo(
+                packageName = packageName,
+                appName = getAppName(packageName),
+                usageTimeMillis = 0,
+                lastTimeUsed = 0,
+                date = now
+            )
+        }
+    }
+
+    /**
+     * Get all launchable apps (apps that appear in launcher)
+     */
+    private fun getLaunchableApps(): Set<String> {
+        return try {
+            val intent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            packageManager.queryIntentActivities(intent, 0)
+                .map { it.activityInfo.packageName }
+                .toSet()
+        } catch (e: Exception) {
+            emptySet()
+        }
+    }
+
+    /**
+     * Get app name from package name
+     */
+    private fun getAppName(packageName: String): String {
+        return try {
+            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(applicationInfo).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            packageName
+        }
+    }
+
+    /**
+     * Check if app is a pure system app (not user-facing)
+     * We want to exclude only background system services, not apps like Chrome, Gmail, etc.
+     */
+    private fun isSystemApp(packageName: String): Boolean {
+        return try {
+            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+            val isSystem = (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            val isUpdatedSystem = (applicationInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+
+            // Include updated system apps (like Chrome, Gmail) - these are user-facing
+            if (isUpdatedSystem) {
+                return false
+            }
+
+            // Exclude pure system apps that are not launchable
+            isSystem
+        } catch (e: PackageManager.NameNotFoundException) {
+            true
+        }
+    }
+
+    /**
+     * Get total screen time for today
+     */
+    fun getTodayTotalUsage(): Long {
+        return getTodayUsageStats().sumOf { it.usageTimeMillis }
+    }
+}
+

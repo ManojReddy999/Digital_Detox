@@ -39,7 +39,7 @@
     <string name="submit_move">Submit Move</string>
     <string name="submit">Submit</string>
     <string name="solve_for_x">Solve for x</string>
-    <string name="question_format">Question %d of %d</string>
+    <string name="question_format">Question %1$d of %2$d</string>
 
     <!-- Tasks -->
     <string name="tasks">Tasks</string>

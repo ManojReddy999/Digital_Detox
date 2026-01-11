@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus - Distinctive Modern UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', system-ui, sans-serif;
+            background: #000000;
+            color: #FFFFFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .phone-container {
+            width: 390px;
+            height: 844px;
+            background: #0d0d0d;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            border: 8px solid #1a1a1a;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.9);
+        }
+
+        .screen {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            padding-bottom: 90px;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Bold header style */
+        .header {
+            padding: 24px 20px 16px;
+            font-size: 40px;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            line-height: 1;
+        }
+
+        .content {
+            padding: 0 20px;
+        }
+
+        /* Profile Screen - Asymmetric Grid */
+        .hero-stat {
+            padding: 32px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .hero-label {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 8px;
+        }
+
+        .hero-value {
+            font-size: 72px;
+            font-weight: 700;
+            letter-spacing: -3px;
+            line-height: 1;
+            color: #00ff88;
+        }
+
+        .hero-unit {
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        /* Compact stats row */
+        .stats-compact {
+            display: flex;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 32px;
+        }
+
+        .stat-compact {
+            flex: 1;
+        }
+
+        .stat-compact-value {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 4px;
+        }
+
+        .stat-compact-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Bold section titles */
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 16px;
+        }
+
+        /* Minimal list items */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .data-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #00ff88;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Focus Groups - Distinctive cards */
+        .group-card {
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 3px solid #00ff88;
+            margin-bottom: 12px;
+            background: rgba(0, 255, 136, 0.02);
+            position: relative;
+        }
+
+        .group-card.inactive {
+            border-left-color: rgba(255, 255, 255, 0.2);
+            background: transparent;
+        }
+
+        .group-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .group-name {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .group-time {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+        }
+
+        .group-apps {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 16px;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-start {
+            flex: 1;
+            padding: 12px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-start:active {
+            transform: scale(0.97);
+        }
+
+        .btn-edit {
+            padding: 12px 20px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Activity Screen - Bold data viz */
+        .time-display {
+            padding: 40px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 32px;
+        }
+
+        .time-large {
+            font-size: 80px;
+            font-weight: 700;
+            letter-spacing: -4px;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .time-sublabel {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Minimalist bar chart */
+        .chart-wrapper {
+            margin-bottom: 40px;
+        }
+
+        .chart-bars {
+            height: 120px;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            margin-bottom: 8px;
+        }
+
+        .bar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .bar:hover {
+            background: #00ff88;
+        }
+
+        .bar::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #00ff88;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .bar:hover::after {
+            opacity: 1;
+        }
+
+        .chart-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* App usage - tight data */
+        .app-list-tight {
+            margin-top: 32px;
+        }
+
+        .app-row-tight {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .app-row-tight:last-child {
+            border-bottom: none;
+        }
+
+        .app-name-tight {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .app-time-tight {
+            font-size: 15px;
+            font-weight: 700;
+            color: #00ff88;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Focus Screen - Minimal progress */
+        .focus-section {
+            padding: 48px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 32px;
+        }
+
+        .progress-number {
+            font-size: 96px;
+            font-weight: 700;
+            letter-spacing: -4px;
+            line-height: 1;
+            color: #00ff88;
+            margin-bottom: 8px;
+        }
+
+        .progress-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+
+        .progress-bar-wrapper {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #00ff88;
+            transition: width 0.5s ease;
+        }
+
+        .time-breakdown {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 20px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 32px;
+            transition: all 0.2s;
+        }
+
+        .btn-large:active {
+            transform: scale(0.98);
+        }
+
+        /* Bottom Nav - Minimal */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 390px;
+            background: rgba(13, 13, 13, 0.98);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            padding: 0 20px 28px;
+            justify-content: space-between;
+        }
+
+        .nav-item {
+            padding: 16px 0 0;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .nav-item.active {
+            color: #00ff88;
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #00ff88;
+        }
+
+        /* Scrollbar */
+        .screen::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        .screen::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .screen::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 136, 0.3);
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .control-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 2px 0;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .control-btn.active {
+            color: #00ff88;
+        }
+
+        .add-button {
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.2s;
+        }
+
+        .add-button:hover {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button class="control-btn active" onclick="showScreen('profile')">Profile</button>
+        <button class="control-btn" onclick="showScreen('groups')">Groups</button>
+        <button class="control-btn" onclick="showScreen('activity')">Activity</button>
+        <button class="control-btn" onclick="showScreen('focus')">Focus</button>
+    </div>
+
+    <div class="phone-container">
+        <!-- Profile Screen -->
+        <div class="screen active" id="profile">
+            <div class="header">Profile</div>
+            <div class="content">
+                <!-- Hero stat -->
+                <div class="hero-stat">
+                    <div class="hero-label">Balance</div>
+                    <div>
+                        <span class="hero-value">986</span>
+                        <span class="hero-unit">coins</span>
+                    </div>
+                </div>
+
+                <!-- Compact stats -->
+                <div class="stats-compact">
+                    <div class="stat-compact">
+                        <div class="stat-compact-value">5d</div>
+                        <div class="stat-compact-label">Streak</div>
+                    </div>
+                    <div class="stat-compact">
+                        <div class="stat-compact-value">24</div>
+                        <div class="stat-compact-label">Sessions</div>
+                    </div>
+                    <div class="stat-compact">
+                        <div class="stat-compact-value">12h</div>
+                        <div class="stat-compact-label">Focus</div>
+                    </div>
+                </div>
+
+                <!-- Streaks -->
+                <div class="section-title">Streaks</div>
+                <div>
+                    <div class="data-row">
+                        <div class="data-label">Timer Compliance</div>
+                        <div class="data-value">3 days</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Focus Sessions</div>
+                        <div class="data-value">5 days</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Screen Time Goal</div>
+                        <div class="data-value">2 days</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 32px;">
+                    <div class="data-row">
+                        <div class="data-label">Name</div>
+                        <div class="data-value" style="color: rgba(255, 255, 255, 0.5);">Manoj</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Version</div>
+                        <div class="data-value" style="color: rgba(255, 255, 255, 0.5);">1.0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Focus Groups Screen -->
+        <div class="screen" id="groups">
+            <div class="header">Groups</div>
+            <div class="content">
+                <div class="group-card">
+                    <div class="group-top">
+                        <div class="group-name">Work Mode</div>
+                        <div class="group-time">15m</div>
+                    </div>
+                    <div class="group-apps">Instagram · Twitter · YouTube</div>
+                    <div class="group-actions">
+                        <button class="btn-start">Start</button>
+                        <button class="btn-edit">Edit</button>
+                    </div>
+                </div>
+
+                <div class="group-card">
+                    <div class="group-top">
+                        <div class="group-name">Deep Focus</div>
+                        <div class="group-time">18:49</div>
+                    </div>
+                    <div class="group-apps">Instagram · WhatsApp</div>
+                    <div class="group-actions">
+                        <button class="btn-start">Start</button>
+                        <button class="btn-edit">Edit</button>
+                    </div>
+                </div>
+
+                <div class="group-card inactive">
+                    <div class="group-top">
+                        <div class="group-name">Study Mode</div>
+                        <div class="group-time">30m</div>
+                    </div>
+                    <div class="group-apps">TikTok · Games</div>
+                    <div class="group-actions">
+                        <button class="btn-start">Start</button>
+                        <button class="btn-edit">Edit</button>
+                    </div>
+                </div>
+
+                <button class="add-button">+ New Focus Group</button>
+            </div>
+        </div>
+
+        <!-- Activity Screen -->
+        <div class="screen" id="activity">
+            <div class="header">Activity</div>
+            <div class="content">
+                <div class="time-display">
+                    <div class="time-large">5:35</div>
+                    <div class="time-sublabel">Screen time today</div>
+                </div>
+
+                <div class="chart-wrapper">
+                    <div class="chart-bars">
+                        <div class="bar" style="height: 55%;"></div>
+                        <div class="bar" style="height: 75%;"></div>
+                        <div class="bar" style="height: 45%;"></div>
+                        <div class="bar" style="height: 65%;"></div>
+                        <div class="bar" style="height: 90%;"></div>
+                        <div class="bar" style="height: 60%;"></div>
+                        <div class="bar" style="height: 50%;"></div>
+                    </div>
+                    <div class="chart-labels">
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                        <span>Sun</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Most Used</div>
+                <div class="app-list-tight">
+                    <div class="app-row-tight">
+                        <div class="app-name-tight">WhatsApp</div>
+                        <div class="app-time-tight">2:36</div>
+                    </div>
+                    <div class="app-row-tight">
+                        <div class="app-name-tight">Instagram</div>
+                        <div class="app-time-tight">1:50</div>
+                    </div>
+                    <div class="app-row-tight">
+                        <div class="app-name-tight">Twitter</div>
+                        <div class="app-time-tight">0:19</div>
+                    </div>
+                    <div class="app-row-tight">
+                        <div class="app-name-tight">Chrome</div>
+                        <div class="app-time-tight">0:14</div>
+                    </div>
+                    <div class="app-row-tight">
+                        <div class="app-name-tight">YouTube</div>
+                        <div class="app-time-tight">0:36</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Focus Screen -->
+        <div class="screen" id="focus">
+            <div class="header">Focus</div>
+            <div class="content">
+                <div class="focus-section">
+                    <div class="progress-number">93<span style="font-size: 48px; color: rgba(255, 255, 255, 0.5);">%</span></div>
+                    <div class="progress-label">Daily Goal</div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-fill" style="width: 93%;"></div>
+                    </div>
+                    <div class="time-breakdown">
+                        <span>5h 35m</span>
+                        <span>6h 00m</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Active</div>
+                <div>
+                    <div class="data-row">
+                        <div class="data-label">Work Mode</div>
+                        <div class="data-value">00:00</div>
+                    </div>
+                </div>
+
+                <button class="btn-large">Start Session</button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="showScreen('profile'); setActiveNav(0)">Profile</div>
+            <div class="nav-item" onclick="showScreen('groups'); setActiveNav(1)">Groups</div>
+            <div class="nav-item" onclick="showScreen('activity'); setActiveNav(2)">Activity</div>
+            <div class="nav-item" onclick="showScreen('focus'); setActiveNav(3)">Focus</div>
+        </div>
+    </div>
+
+    <script>
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+            
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function setActiveNav(index) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-item')[index].classList.add('active');
+        }
+    </script>
+</body>
+</html>

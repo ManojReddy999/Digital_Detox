@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.digitalwellbeing"
-    compileSdk = 34
+    namespace = "com.focus.digitalwellbeing"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.digitalwellbeing"
+        applicationId = "com.focus.digitalwellbeing"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 35
+        versionCode = 17
+        versionName = "1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -67,6 +67,12 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
+    // Accompanist
+    implementation("com.google.accompanist:accompanist-drawablepainter:0.34.0")
+
+    // Coil
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
@@ -80,7 +86,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -93,4 +99,14 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // XML Views Support
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.cardview:cardview:1.0.0")
+
+    // Gson
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    // Google Play Billing
+    implementation("com.android.billingclient:billing-ktx:6.1.0")
 }

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Pixel Lock Shackle (Neon Green Outline) -->
+    <path
+        android:fillColor="#00FF88"
+        android:pathData="
+        M39,24 h30 v10 h-10 v10 h-10 v-10 h-10 z
+        M39,24 v20 h-10 v-20 h10 z
+        M69,24 v20 h10 v-20 h-10 z
+        " />
+
+    <!-- Pixel Lock Body (Neon Green Solid) -->
+    <path
+        android:fillColor="#00FF88"
+        android:pathData="
+        M29,44 h50 v40 h-50 z
+        " />
+        
+    <!-- Keyhole (Black) -->
+    <path
+        android:fillColor="#0D0D0D"
+        android:pathData="
+        M49,59 h10 v10 h-10 z
+        " />
+
+</vector>

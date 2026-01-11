@@ -19,4 +19,7 @@
     <!-- Status colors (kept minimal) -->
     <color name="success">#FF000000</color>
     <color name="error">#FF000000</color>
+    
+    <!-- Brand Color from Icon -->
+    <color name="neon_green">#00FF99</color>
 </resources>

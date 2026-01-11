@@ -6,15 +6,18 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- Permission for foreground service -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Permission for foreground service - EXPLICITLY REMOVED -->
+    <!-- We do not use foreground services. WorkManager is used for background periodic work only. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" tools:node="remove" />
 
     <!-- Permission for system alert window (overlay) -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- Permission to post notifications -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Permission to schedule exact alarms -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Permission to query all packages (Android 11+) -->
     <queries>
@@ -55,11 +58,6 @@
             android:taskAffinity=""
             android:noHistory="true" />
 
-        <!-- Timer overlay service -->
-        <service
-            android:name=".service.TimerOverlayService"
-            android:exported="false" />
-
         <!-- Accessibility service for app blocking -->
         <service
             android:name=".service.AppBlockingAccessibilityService"
@@ -73,7 +71,18 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- WorkManager initialization -->
+        <!-- Receiver for scheduled focus sessions -->
+        <receiver android:name=".service.FocusSessionReceiver" />
+
+        <!-- Stop Focus Dialog Activity -->
+        <activity
+            android:name=".service.StopFocusDialogActivity"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false" />
+
+        <!-- Disable automatic WorkManager initialization - we initialize manually -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
@@ -81,8 +90,15 @@
             tools:node="merge">
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup" />
+                android:value="androidx.startup"
+                tools:node="remove" />
         </provider>
+
+        <!-- Explicitly remove WorkManager's foreground service to avoid permission requirements -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="remove" />
     </application>
 
 </manifest>
