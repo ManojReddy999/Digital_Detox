@@ -69,3 +69,7 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+.claude/
+
+.cursor/
